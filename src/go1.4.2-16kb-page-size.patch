@@ -1,0 +1,155 @@
+diff -ru a/src/cmd/5l/obj.c b/src/cmd/5l/obj.c
+--- a/src/cmd/5l/obj.c	2015-07-31 13:40:11.000000000 -0700
++++ b/src/cmd/5l/obj.c	2015-07-31 15:49:11.673090325 -0700
+@@ -91,7 +91,7 @@
+ 		if(INITDAT == -1)
+ 			INITDAT = 0;
+ 		if(INITRND == -1)
+-			INITRND = 4096;
++			INITRND = 16384;
+ 		break;
+ 	case Hnacl:
+ 		elfinit();
+diff -ru a/src/cmd/6l/obj.c b/src/cmd/6l/obj.c
+--- a/src/cmd/6l/obj.c	2015-07-31 13:40:11.000000000 -0700
++++ b/src/cmd/6l/obj.c	2015-07-31 15:44:58.996266902 -0700
+@@ -100,7 +100,7 @@
+ 		if(INITDAT == -1)
+ 			INITDAT = 0;
+ 		if(INITRND == -1)
+-			INITRND = 4096;
++			INITRND = 16384;
+ 		break;
+ 	case Hdarwin:		/* apple MACH */
+ 		machoinit();
+@@ -125,7 +125,7 @@
+ 		if(INITDAT == -1)
+ 			INITDAT = 0;
+ 		if(INITRND == -1)
+-			INITRND = 4096;
++			INITRND = 16384;
+ 		break;
+ 	case Hnacl:
+ 		elfinit();
+diff -ru a/src/cmd/8l/obj.c b/src/cmd/8l/obj.c
+--- a/src/cmd/8l/obj.c	2015-07-31 13:40:11.000000000 -0700
++++ b/src/cmd/8l/obj.c	2015-07-31 15:46:31.779100464 -0700
+@@ -106,7 +106,7 @@
+ 		if(INITDAT == -1)
+ 			INITDAT = 0;
+ 		if(INITRND == -1)
+-			INITRND = 4096;
++			INITRND = 16384;
+ 		break;
+ 	
+ 	case Hnacl:
+diff -ru a/src/make.bash b/src/make.bash
+--- a/src/make.bash	2015-07-31 13:40:12.000000000 -0700
++++ b/src/make.bash	2015-08-02 08:46:05.031853432 -0700
+@@ -155,7 +155,7 @@
+ 	buildall=""
+ 	shift
+ fi
+-./cmd/dist/dist bootstrap $buildall $GO_DISTFLAGS -v # builds go_bootstrap
++./cmd/dist/dist bootstrap $buildall $GO_DISTFLAGS -vv # builds go_bootstrap
+ # Delay move of dist tool to now, because bootstrap may clear tool directory.
+ mv cmd/dist/dist "$GOTOOLDIR"/dist
+ "$GOTOOLDIR"/go_bootstrap clean -i std
+@@ -166,12 +166,12 @@
+ 	# CC_FOR_TARGET is recorded as the default compiler for the go tool. When building for the host, however,
+ 	# use the host compiler, CC, from `cmd/dist/dist env` instead.
+ 	CC=$CC GOOS=$GOHOSTOS GOARCH=$GOHOSTARCH \
+-		"$GOTOOLDIR"/go_bootstrap install -ccflags "$GO_CCFLAGS" -gcflags "$GO_GCFLAGS" -ldflags "$GO_LDFLAGS" -v std
++		"$GOTOOLDIR"/go_bootstrap install -ccflags "$GOHOST_CCFLAGS" -gcflags "$GOHOST_GCFLAGS" -ldflags "$GOHOST_LDFLAGS" -v -x std
+ 	echo
+ fi
+ 
+ echo "# Building packages and commands for $GOOS/$GOARCH."
+-CC=$CC_FOR_TARGET "$GOTOOLDIR"/go_bootstrap install $GO_FLAGS -ccflags "$GO_CCFLAGS" -gcflags "$GO_GCFLAGS" -ldflags "$GO_LDFLAGS" -v std
++CC=$CC_FOR_TARGET "$GOTOOLDIR"/go_bootstrap install $GO_FLAGS -ccflags "$GO_CCFLAGS" -gcflags "$GO_GCFLAGS" -ldflags "$GO_LDFLAGS" -v -x std
+ echo
+ 
+ rm -f "$GOTOOLDIR"/go_bootstrap
+diff -ru a/src/runtime/arch_arm.h b/src/runtime/arch_arm.h
+--- a/src/runtime/arch_arm.h	2015-07-31 13:40:13.000000000 -0700
++++ b/src/runtime/arch_arm.h	2015-07-31 16:01:23.203893737 -0700
+@@ -10,7 +10,7 @@
+ #ifdef GOOS_nacl
+ 	PhysPageSize = 65536,
+ #else
+-	PhysPageSize = 4096,
++	PhysPageSize = 16384,
+ #endif
+ 	PCQuantum = 4,
+ 	Int64Align = 4
+diff -ru a/src/runtime/mem_linux.c b/src/runtime/mem_linux.c
+--- a/src/runtime/mem_linux.c	2015-07-31 13:40:13.000000000 -0700
++++ b/src/runtime/mem_linux.c	2015-07-31 16:00:48.868325394 -0700
+@@ -11,7 +11,7 @@
+ 
+ enum
+ {
+-	_PAGE_SIZE = 4096,
++	_PAGE_SIZE = 16384,
+ 	EACCES = 13,
+ };
+ 
+@@ -51,7 +51,7 @@
+ 	if(p != v && addrspace_free(v, n)) {
+ 		// On some systems, mmap ignores v without
+ 		// MAP_FIXED, so retry if the address space is free.
+-		if(p > (void*)4096)
++		if(p > (void*)16384)
+ 			runtime·munmap(p, n);
+ 		p = runtime·mmap(v, n, prot, flags|MAP_FIXED, fd, offset);
+ 	}
+@@ -65,7 +65,7 @@
+ 	void *p;
+ 
+ 	p = runtime·mmap(nil, n, PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, -1, 0);
+-	if(p < (void*)4096) {
++	if(p < (void*)16384) {
+ 		if(p == (void*)EACCES) {
+ 			runtime·printf("runtime: mmap: access denied\n");
+ 			runtime·printf("if you're running SELinux, enable execmem for this process.\n");
+@@ -119,7 +119,7 @@
+ 	if(sizeof(void*) == 8 && n > 1LL<<32) {
+ 		p = mmap_fixed(v, 64<<10, PROT_NONE, MAP_ANON|MAP_PRIVATE, -1, 0);
+ 		if (p != v) {
+-			if(p >= (void*)4096)
++			if(p >= (void*)16384)
+ 				runtime·munmap(p, 64<<10);
+ 			return nil;
+ 		}
+@@ -129,7 +129,7 @@
+ 	}
+ 
+ 	p = runtime·mmap(v, n, PROT_NONE, MAP_ANON|MAP_PRIVATE, -1, 0);
+-	if((uintptr)p < 4096)
++	if((uintptr)p < 16384)
+ 		return nil;
+ 	*reserved = true;
+ 	return p;
+diff -ru a/src/syscall/syscall_linux_arm.go b/src/syscall/syscall_linux_arm.go
+--- a/src/syscall/syscall_linux_arm.go	2015-07-31 13:40:13.000000000 -0700
++++ b/src/syscall/syscall_linux_arm.go	2015-07-31 13:57:45.193150761 -0700
+@@ -6,7 +6,7 @@
+ 
+ import "unsafe"
+ 
+-func Getpagesize() int { return 4096 }
++func Getpagesize() int { return 16384 }
+ 
+ func TimespecToNsec(ts Timespec) int64 { return int64(ts.Sec)*1e9 + int64(ts.Nsec) }
+ 
+@@ -109,8 +109,8 @@
+ }
+ 
+ func mmap(addr uintptr, length uintptr, prot int, flags int, fd int, offset int64) (xaddr uintptr, err error) {
+-	page := uintptr(offset / 4096)
+-	if offset != int64(page)*4096 {
++	page := uintptr(offset / 16384)
++	if offset != int64(page)*16384 {
+ 		return 0, EINVAL
+ 	}
+ 	return mmap2(addr, length, prot, flags, fd, page)
