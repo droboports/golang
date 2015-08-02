@@ -25,6 +25,7 @@ export GOROOT_FINAL="${DEST}"
 export CC_FOR_TARGET="${CC}"
 export CXX_FOR_TARGET="${CXX}"
 export GOARCH=arm
+export GOARM=7
 export GOOS=linux
 case $(uname -p) in
   x86_64) export GOHOSTARCH=amd64 ;;
@@ -40,9 +41,9 @@ esac
   popd
 )
 
-mkdir -p "${DEST}/bin"
+mkdir -p "${DEST}/bin" "${DEST}/libexec"
 cp -vfaR "target/${FOLDER}/bin/linux_arm/"* "${DEST}/bin/"
-cp -vfaR "target/${FOLDER}/pkg/tool/linux_arm/"* "${DEST}/bin/"
+cp -vfaR "target/${FOLDER}/pkg/tool/linux_arm/"* "${DEST}/libexec/"
 }
 
 ### BUILD ###
