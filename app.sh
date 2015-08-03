@@ -21,9 +21,11 @@ local URL="https://go.googlesource.com/go/+archive/${FILE}"
 
 _download_go "${FILE}" "${URL}" "${FOLDER}"
 cp "src/${FOLDER}-16kb-page-size.patch" "target/${FOLDER}"
+
 export GOROOT_FINAL="${DEST}"
 export CC_FOR_TARGET="${CC}"
 export CXX_FOR_TARGET="${CXX}"
+export GOGCCFLAGS="${CFLAGS}"
 export GOARCH=arm
 export GOARM=7
 export GOOS=linux
@@ -36,14 +38,14 @@ esac
   pushd "target/${FOLDER}"
   patch -p1 -i "${FOLDER}-16kb-page-size.patch"
   cd src
+  export GOROOT="${PWD}"
   export CC=/usr/bin/gcc
   ./make.bash
   popd
 )
 
-mkdir -p "${DEST}/bin" "${DEST}/libexec"
-cp -vfaR "target/${FOLDER}/bin/linux_arm/"* "${DEST}/bin/"
-cp -vfaR "target/${FOLDER}/pkg/tool/linux_arm/"* "${DEST}/libexec/"
+if [ -d "${DEST}" ]; then rm -fr "${DEST}"; fi
+cp -vfaR "target/${FOLDER}" "${DEST}"
 }
 
 ### BUILD ###
