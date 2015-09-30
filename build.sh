@@ -16,10 +16,15 @@ set -o xtrace
 timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
 logfile="logfile_${timestamp}.txt"
 echo "${0} ${@}" > "${logfile}"
-# save stdout to logfile
-exec 1> >(tee -a "${logfile}")
-# redirect errors to stdout
-exec 2> >(tee -a "${logfile}" >&2)
+if [ -z "${CONTINUOUS_INTEGRATION:-}" ]; then
+  # save stdout to logfile
+  exec 1> >(tee -a "${logfile}")
+  # redirect errors to stdout
+  exec 2> >(tee -a "${logfile}" >&2)
+else
+  exec 1> "${logfile}"
+  exec 2> >(tee -a "${logfile}" >&2)
+fi
 
 ### environment setup ###
 . crosscompile.sh
@@ -180,10 +185,17 @@ _dist_clean() {
 ### application-specific functions ###
 . app.sh
 
-case "${1:-}" in
-  clean)     _clean ;;
-  distclean) _dist_clean ;;
-  package)   _package ;;
-  "")        _build ;;
-  *)         _build_${1} ;;
-esac
+if [ -n "${1:-}" ]; then
+  while [ -n "${1:-}" ]; do
+    case "${1}" in
+      clean)     _clean ;;
+      distclean) _dist_clean ;;
+      all)       _build ;;
+      package)   _package ;;
+      *)         _build_${1} ;;
+    esac
+    shift
+  done
+else
+  _build
+fi

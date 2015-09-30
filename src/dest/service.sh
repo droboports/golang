@@ -7,8 +7,8 @@
 
 framework_version="2.1"
 name="golang"
-version="1.4.2"
-description="Golang 1.4.2"
+version="1.5.1"
+description="Golang runtime environment"
 depends=""
 webui=""
 
@@ -61,7 +61,6 @@ STDERR=">&4"
 echo "$(date +"%Y-%m-%d %H-%M-%S"):" "${0}" "${@}"
 set -o errexit  # exit on uncaught error code
 set -o nounset  # exit on unset variable
-set -o pipefail # propagate last error code on pipe
 set -o xtrace   # enable script tracing
 
 main "${@}"

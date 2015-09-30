@@ -1,0 +1,65 @@
+diff -ru a/src/cmd/link/internal/arm/obj.go b/src/cmd/link/internal/arm/obj.go
+--- a/src/cmd/link/internal/arm/obj.go	2015-09-29 13:25:50.000000000 -0700
++++ b/src/cmd/link/internal/arm/obj.go	2015-09-30 04:52:58.017997442 -0700
+@@ -134,7 +134,7 @@
+ 			ld.INITDAT = 0
+ 		}
+ 		if ld.INITRND == -1 {
+-			ld.INITRND = 4096
++			ld.INITRND = 16384
+ 		}
+ 
+ 	case obj.Hnacl:
+diff -ru a/src/make.bash b/src/make.bash
+--- a/src/make.bash	2015-09-29 13:25:51.000000000 -0700
++++ b/src/make.bash	2015-09-30 05:03:14.146251661 -0700
+@@ -153,12 +153,12 @@
+ 	# CC_FOR_TARGET is recorded as the default compiler for the go tool. When building for the host, however,
+ 	# use the host compiler, CC, from `cmd/dist/dist env` instead.
+ 	CC=$CC GOOS=$GOHOSTOS GOARCH=$GOHOSTARCH \
+-		"$GOTOOLDIR"/go_bootstrap install -gcflags "$GO_GCFLAGS" -ldflags "$GO_LDFLAGS" -v std cmd
++		"$GOTOOLDIR"/go_bootstrap install -gcflags "$GOHOST_GCFLAGS" -ldflags "$GOHOST_LDFLAGS" -v std cmd
+ 	echo
+ fi
+ 
+ echo "##### Building packages and commands for $GOOS/$GOARCH."
+-CC=$CC_FOR_TARGET "$GOTOOLDIR"/go_bootstrap install $GO_FLAGS -gcflags "$GO_GCFLAGS" -ldflags "$GO_LDFLAGS" -v std cmd
++CC=$CC_FOR_TARGET "$GOTOOLDIR"/go_bootstrap install $GO_FLAGS -gcflags "$GO_GCFLAGS" -ldflags "$GO_LDFLAGS" -v -x std cmd
+ echo
+ 
+ rm -f "$GOTOOLDIR"/go_bootstrap
+diff -ru a/src/runtime/arch1_arm.go b/src/runtime/arch1_arm.go
+--- a/src/runtime/arch1_arm.go	2015-09-29 13:25:51.000000000 -0700
++++ b/src/runtime/arch1_arm.go	2015-09-30 04:49:11.288847813 -0700
+@@ -8,7 +8,7 @@
+ 	thechar        = '5'
+ 	_BigEndian     = 0
+ 	_CacheLineSize = 32
+-	_PhysPageSize  = 65536*goos_nacl + 4096*(1-goos_nacl)
++	_PhysPageSize  = 65536*goos_nacl + 16384*(1-goos_nacl)
+ 	_PCQuantum     = 4
+ 	_Int64Align    = 4
+ 	hugePageSize   = 0
+diff -ru a/src/syscall/syscall_linux_arm.go b/src/syscall/syscall_linux_arm.go
+--- a/src/syscall/syscall_linux_arm.go	2015-09-29 13:25:52.000000000 -0700
++++ b/src/syscall/syscall_linux_arm.go	2015-09-29 13:25:58.869224835 -0700
+@@ -8,7 +8,7 @@
+ 
+ const _SYS_dup = SYS_DUP2
+ 
+-func Getpagesize() int { return 4096 }
++func Getpagesize() int { return 16384 }
+ 
+ func TimespecToNsec(ts Timespec) int64 { return int64(ts.Sec)*1e9 + int64(ts.Nsec) }
+ 
+@@ -136,8 +136,8 @@
+ }
+ 
+ func mmap(addr uintptr, length uintptr, prot int, flags int, fd int, offset int64) (xaddr uintptr, err error) {
+-	page := uintptr(offset / 4096)
+-	if offset != int64(page)*4096 {
++	page := uintptr(offset / 16384)
++	if offset != int64(page)*16384 {
+ 		return 0, EINVAL
+ 	}
+ 	return mmap2(addr, length, prot, flags, fd, page)

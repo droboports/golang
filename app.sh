@@ -11,17 +11,34 @@ _download_go() {
   return 0
 }
 
-## GO ##
-_build_go() {
-local VERSION="1.4.2"
+## GO BOOTSTRAP ##
+export GO_BOOTSTRAP_VERSION="1.4.3"
+_build_go_bootstrap() {
+local VERSION="${GO_BOOTSTRAP_VERSION}"
 local FOLDER="go${VERSION}"
-local FILE="${FOLDER}.tar.gz"
-local URL="https://go.googlesource.com/go/+archive/${FILE}"
-#export QEMU_LD_PREFIX="${TOOLCHAIN}/${HOST}/libc"
+local FILE="${FOLDER}.src.tar.gz"
+local URL="https://storage.googleapis.com/golang/${FILE}"
 
 _download_go "${FILE}" "${URL}" "${FOLDER}"
-cp "src/${FOLDER}-16kb-page-size.patch" "target/${FOLDER}"
 
+( . uncrosscompile.sh
+  pushd "target/${FOLDER}/go/src"
+  export GOROOT="${PWD}"
+  export CC=/usr/bin/gcc
+  ./make.bash )
+}
+
+## GO ##
+_build_go() {
+local VERSION="1.5.1"
+local FOLDER="go${VERSION}"
+local FILE="${FOLDER}.src.tar.gz"
+local URL="https://storage.googleapis.com/golang/${FILE}"
+
+_download_go "${FILE}" "${URL}" "${FOLDER}"
+cp "src/${FOLDER}-16kb-page-size.patch" "target/${FOLDER}/go"
+
+export GOROOT_BOOTSTRAP="${PWD}/target/go${GO_BOOTSTRAP_VERSION}/go"
 export GOROOT_FINAL="${DEST}"
 export CC_FOR_TARGET="${CC}"
 export CXX_FOR_TARGET="${CXX}"
@@ -35,21 +52,22 @@ case $(uname -p) in
 esac
 
 ( . uncrosscompile.sh
-  pushd "target/${FOLDER}"
+  pushd "target/${FOLDER}/go"
   patch -p1 -i "${FOLDER}-16kb-page-size.patch"
   cd src
-  export GOROOT="${PWD}"
+#  export GOROOT="${PWD}"
   export CC=/usr/bin/gcc
   ./make.bash
   popd
 )
 
 if [ -d "${DEST}" ]; then rm -fr "${DEST}"; fi
-cp -vfaR "target/${FOLDER}" "${DEST}"
+cp -vfaR "target/${FOLDER}/go" "${DEST}"
 }
 
 ### BUILD ###
 _build() {
+  _build_go_bootstrap
   _build_go
   _package
 }
